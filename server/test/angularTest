@@ -1,0 +1,78 @@
+let supertest = require('supertest');
+let express = require('express');
+let sinon = require('sinon');
+let should=require('chai').should();
+let expect = require('chai').expect;
+let assert = require('chai').assert;
+let app = require('../app');
+let index = require('../routes/index');
+let users =require('../routes/users');
+let updateval =require('../routes/update');
+let deleteval =require('../routes/delete');
+let schema = require('../model/registerSchema');
+
+let url=supertest('http://localhost:3005');
+
+let getstub=sinon.stub(schema,'find');
+let poststub=sinon.stub(schema,'insertMany');
+let putstub=sinon.stub(schema,'update');
+let deletestub=sinon.stub(schema,'remove');
+
+describe('Method request to be processed here',()=>{
+	beforeEach(()=>{
+		//yield is used to stub the info required by database
+		getstub.yields(null,[{author:"Lakshay",title: "Mytitle",description:"getbody",urlToImage:"geturl"}]);	
+		poststub.yields(null,[{author:"postauthor",title:"postany",description:"postbody",urlToImage:"posturl"}]);	
+		putstub.yields(null,{"ok": 1,"nModified": 1,"n": 1});
+		deletestub.yields(null,{"ok": 1,"n": 1});
+	});
+	it('Get must be a success',(done)=>{
+		url
+			.get('/')
+			.expect('Content-Type', /json/)
+			.expect(200)
+			.end((err,res)=>{
+				assert.equal(res.body.user[0].author,10);
+				assert.equal(res.body.user[0].title,'getany');
+				assert.equal(res.body.user[0].description,'getbody');
+				assert.equal(res.body.user[0].urlToImage,"geturl");
+				done();
+			});
+	});
+		it('Post must be a success',(done)=>{
+		url
+			.post('/users')
+			.expect('Content-Type', /json/)
+			.expect(200)
+			.send({author:"postauthor",title:"postany",description:"postbody",urlToImage:"posturl"})
+			.end((err,res)=>{
+				assert.equal(res.body.user[0].author,"postauthor");
+				assert.equal(res.body.user[0].title,'postany');
+				assert.equal(res.body.user[0].description,'postbody');
+				assert.equal(res.body.user[0].urlToImage,"posturl");
+				done();
+			});
+	});
+		it('Put must be a success',(done)=>{
+		url
+			.put('/12')
+			.expect('Content-Type', /json/)
+			.expect(200)
+			.send({title:"changed"})
+			.end((err,res)=>{
+				// console.log(res.body);      //res.body gives the info passed in yield
+				assert.deepEqual(res.body,{ user: { ok: 1, nModified: 1, n: 1 } } );		//Message passed in postman after update is performed 
+				done();
+			});
+	});
+		it('Delete must be a success',(done)=>{
+		url
+			.delete('/14')
+			.expect('Content-Type', /json/)
+			.expect(200)
+			.end((err,res)=>{
+				// console.log(res.body);
+				assert.deepEqual(res.body,{ user: { ok: 1, n: 1 } });  //Message passed in postman after delete is performed
+				done();
+			});
+	});
